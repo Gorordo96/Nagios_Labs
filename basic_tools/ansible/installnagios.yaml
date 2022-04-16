@@ -1,0 +1,62 @@
+---
+- name: Instalacion de Cliente Nagios
+  #Inventario de host
+  hosts: nagiosclient
+  #Nombre de usuario para conexion
+  remote_user: "{{ user }}"
+  become: true
+  
+  tasks:
+  - name: Crear usuario nagios
+    user:
+      name: nagios
+      comment: usuario nagios para monitoreo
+      shell: /bin/bash
+  
+  - name: Instalacion de paquetes necesarios
+    apt:
+      update_cache: yes
+      pkg:
+        - ssh 
+        - autoconf
+        - gcc
+        - libc6
+        - libmcrypt-dev
+        - make
+        - libssl-dev
+        - wget
+        - bc
+        - gawk
+        - dc
+        - build-essential
+        - snmp
+        - libnet-snmp-perl 
+        - gettext
+
+  - name: Descarga de plugins
+    get_url:
+      url: https://github.com/nagios-plugins/nagios-plugins/releases/download/release-2.4.0/nagios-plugins-2.4.0.tar.gz
+      dest: /tmp/nagiosplugins.tar.gz
+
+  - name: Instalacion de plugins
+    shell:
+      cmd: 'cd /tmp && tar xzvf /tmp/nagiosplugins.tar.gz && cd /tmp/nagios-plugins-2.4.0 && ./configure --with-nagios-user=nagios --with-nagios-group=nagios && make && make install'
+
+  - name: Descarga de NRPE
+    get_url:
+      url: https://github.com/NagiosEnterprises/nrpe/archive/refs/tags/nrpe-4.0.3.tar.gz
+      dest: /tmp/nagiosnrpe.tar.gz
+
+  - name: Instalacion de NRPE
+    shell:
+      cmd: 'cd /tmp && tar xzvf /tmp/nagiosnrpe.tar.gz && cd /tmp/nrpe-nrpe-4.0.3 && ./configure --with-nagios-user=nagios --with-nagios-group=nagios && make all && make install && make install-config'
+
+  - name: Configuraciones de NRPE
+    lineinfile:
+      path: /usr/local/nagios/etc/nrpe.cfg
+      regexp: '^allowed_hosts='
+      line: allowed_hosts=127.0.0.1,::1,192.168.50.2
+
+  - name: Iniciando Servicio
+    shell:
+      cmd: 'chmod u+x /tmp/nrpe-nrpe-4.0.3/startup/default-init && /tmp/nrpe-nrpe-4.0.3/startup/default-init start'

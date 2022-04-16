@@ -1,0 +1,4 @@
+Servidor_Web,Nodo_Tres,Basico+Tomcat,192.168.50.4,SampleWebApp
+Servidor_General_2,Nodo_Cuatro,Basico,192.168.50.5
+Servidor_General_3,Nodo_Cinco,Basico,192.168.50.6
+Servidor_Postgres,Nodo_Seis,Basico+Postgres,192.168.50.7

@@ -1,0 +1,11 @@
+[nagiosclient]
+192.168.50.4 user=root
+192.168.50.5 user=root
+192.168.50.6 user=root
+192.168.50.7 user=root
+
+[tomcatnodes]
+192.168.50.4 user=root
+
+[postgresnodes]
+192.168.50.7 user=root

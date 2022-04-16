@@ -1,0 +1,49 @@
+---
+- name: Instalacion de plugins para Postgres
+  # Inventario de host
+  hosts: postgresnodes
+  # Usuario que ejecuta los comandos en el nodo
+  remote_user: "{{ user }}"
+  become: true
+
+  tasks:
+  - name: Copiar check_postgres-2.24.0.tar.gz
+    copy:
+      src: check_postgres-2.24.0.tar.gz
+      dest: /root/check_postgres-2.24.0.tar.gz
+  
+  - name: Configurando check_postgres-2.24.0
+    shell:
+      cmd: 'cd /root && tar -xvf check_postgres-2.24.0.tar.gz && cp check_postgres-*/check_postgres.pl /usr/local/nagios/libexec/ && chown nagios:nagios /usr/local/nagios/libexec/check_postgres.pl && cd /usr/local/nagios/libexec && perl check_postgres.pl --symlinks' 
+  
+  - name: Configuramos el fichero /etc/postgresql-common/pg_service.conf
+    copy: 
+      dest: /etc/postgresql-common/pg_service.conf
+      content: |
+        [managed-db]
+        host=localhost 
+        port=5432
+        user=postgres
+        password=s3cr3t0P0stgr3s
+        dbname=postgres
+        sslmode=require
+    
+  - name: Configuracion de acceso a base de datos
+    shell:
+      cmd: su - postgres -c "psql template1 -c \"ALTER USER postgres with encrypted password 's3cr3t0P0stgr3s';\""
+      
+  - name: Modificacion de /usr/local/nagios/etc/nrpe.cfg
+    lineinfile: 
+      dest: /usr/local/nagios/etc/nrpe.cfg
+      line: "{{ item }}"
+    loop:
+      - 'command[check_postgres_connection]=/usr/local/nagios/libexec/check_postgres_connection --dbservice=managed-db'
+      - 'command[check_postgres_database_size]=/usr/local/nagios/libexec/check_postgres_database_size --dbservice=managed-db --critical=2048MB'
+      - 'command[check_postgres_locks]=/usr/local/nagios/libexec/check_postgres_locks --dbservice=managed-db'
+      - 'command[check_postgres_backends]=/usr/local/nagios/libexec/check_postgres_backends --dbservice=managed-db'
+      - 'command[check_postgres_query_time]=/usr/local/nagios/libexec/check_postgres_query_time --dbservice=managed-db --critical=5s'
+      - 'command[check_postgres_indexes_size]=/usr/local/nagios/libexec/check_postgres_indexes_size --dbservice=managed-db --critical=1024MB'
+  
+  - name: Reiniciando Servicio
+    shell:
+      cmd: '/tmp/nrpe-nrpe-4.0.3/startup/default-init restart'

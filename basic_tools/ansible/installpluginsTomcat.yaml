@@ -1,0 +1,55 @@
+---
+- name: Instalacion de plugins para Tomcat
+  # Inventario de host
+  hosts: tomcatnodes
+  # Usuario que ejecuta los comandos en el nodo
+  remote_user: "{{ user }}"
+  become: true
+
+  tasks:
+  - name: Instalar dependencias necesarias
+    apt:
+      update_cache: yes
+      pkg:
+      - python
+      - tar
+
+  - name: Copiar check_tomcat.py-2.2.tar.gz
+    copy:
+      src: check_tomcat.py-2.2.tar.gz
+      dest: /tmp/check_tomcat.py-2.2.tar.gz
+
+
+  - name: Descomprimir check_tomcat.py-2.2.tar.gz
+    shell:
+      cmd: 'cd /tmp && tar xvf check_tomcat.py-2.2.tar.gz'
+
+  - name: Mover ejecutable 
+    shell:
+      cmd: 'cp /tmp/check_tomcat.py-2.2/check_tomcat.py /usr/local/nagios/libexec/ && chown nagios.nagios /usr/local/nagios/libexec/check_tomcat.py'
+
+  - name: Modificacion de /opt/tomcat/conf/tomcat-users.xml
+    lineinfile: 
+      dest: /opt/tomcat/conf/tomcat-users.xml
+      line: "{{ item }}"
+      insertbefore: '</tomcat-users>'
+    loop:
+      - '<user username="tomcat" password="s3cret" roles="manager-gui"/>'
+      - '<user username="tomcat" password="s3cret" roles="manager-script"/>' 
+
+  - name: Modificacion de /usr/local/nagios/etc/nrpe.cfg
+    lineinfile: 
+      dest: /usr/local/nagios/etc/nrpe.cfg
+      line: "{{ item }}"
+    loop:
+      - 'command[check_tomcat_app]=python /usr/local/nagios/libexec/check_tomcat.py -H localhost -p 8080 -m app -u tomcat -a s3cret -n SampleWebApp'
+      - 'command[check_tomcat_mem]=python /usr/local/nagios/libexec/check_tomcat.py -H localhost -p 8080 -m mem -u tomcat -a s3cret -w 15 -c 30'
+      - 'command[check_tomcat_thread]=python /usr/local/nagios/libexec/check_tomcat.py -H localhost -p 8080 -m thread -u tomcat -a s3cret -w 100 -c 250'
+      - 'command[check_tomcat_status]=python /usr/local/nagios/libexec/check_tomcat.py -H localhost -p 8080 -m status -u tomcat -a s3cret'
+
+# No te olvides de reiniciar tomcat
+  - name: Reiniciando Servicio
+    shell:
+      cmd: '/tmp/nrpe-nrpe-4.0.3/startup/default-init restart'
+
+  

@@ -1,0 +1,92 @@
+version: '3'
+
+services:
+
+# Nodo master de monitoreo con Nagios
+  server_nagios:
+    container_name: nagios_server
+    image: nagios_server:v1
+    build: ./Nagios_Server
+    ports:
+      - 9090:80
+    expose:
+      - "22"
+      - "5666"
+    volumes:
+      - ./Nagios_Server/files/commands.cfg:/usr/local/nagios/etc/objects/commands.cfg
+      - ./Nagios_Server/files/nagios.cfg:/usr/local/nagios/etc/nagios.cfg
+      - ./Nagios_Server/files/nodo_one.cfg:/usr/local/nagios/etc/objects/host_monitor/nodo_one.cfg
+    networks:
+      red_nagios:
+        ipv4_address: 192.168.50.2
+
+# Es un nodo monitoreado por Nagios (Linux), donde la instalacion del cliente nagios esta presente en el mismo Dockerfile
+  node_one:
+    container_name: nagios_nodeone
+    image: nagios_nodeone:v1
+    build: ./Nagios_Nodes/node_1
+    expose:
+      - "22"
+      - "5666"
+    volumes:
+      - ./Nagios_Nodes/node_1/files/nrpe.cfg:/usr/local/nagios/etc/nrpe.cfg
+    networks:
+      red_nagios:
+        ipv4_address: 192.168.50.3
+
+# Es un nodo que puede ser monitoreado por nagios (Tomcat), debe utilizarse el playbook de ansible.
+  node_two:
+    container_name: nagios_nodetwo
+    image: nagios_nodetwo:v1
+    build: ./Nagios_Nodes/node_2
+    expose:
+      - "22"
+      - "5666"
+      - "8080"
+    ports:
+      - 9091:8080
+    networks:
+      red_nagios:
+        ipv4_address: 192.168.50.4
+
+# Es un nodo que puede ser monitoreado por nagios (Ubuntu), debe utilizarse el playbook de ansible.
+  node_three:
+    container_name: nagios_nodethree
+    image: nagios_nodethree:v1
+    build: ./Nagios_Nodes/node_3
+    expose:
+      - "22"
+      - "5666"
+    networks:
+      red_nagios:
+        ipv4_address: 192.168.50.5
+
+# Es un nodo que puede ser monitoreado por nagios (Ubuntu), debe utilizarse el playbook de ansible.
+  node_three_two:
+    container_name: nagios_nodethree2
+    image: nagios_nodethree:v1
+    build: ./Nagios_Nodes/node_3
+    expose:
+      - "22"
+      - "5666"
+    networks:
+      red_nagios:
+        ipv4_address: 192.168.50.6
+
+# Es un nodo que puede ser monitoreado por nagios (Postgresql), debe utilizarse el playbook de ansible.
+  node_four:
+    container_name: nagios_nodefour
+    image: nagios_nodefour:v1
+    build: ./Nagios_Nodes/node_4
+    expose:
+      - "22"
+      - "5666"
+    networks:
+      red_nagios:
+        ipv4_address: 192.168.50.7
+
+networks:
+  red_nagios:
+    ipam:
+      config:
+        - subnet: 192.168.50.0/24
